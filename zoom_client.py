@@ -1,3 +1,4 @@
+from concurrent.futures import thread
 from enum import Enum
 from operator import le
 from time import sleep
@@ -37,8 +38,18 @@ class ZoomClient(object):
     __participants: "list[Participant]" = []
     __old_participants_els: list = []
     __last_id: int = 0
+    __threads: "list[threading.Thread]" = []
+    __funcs = {}
 
     def __init__(self) -> None:
+        self.__funcs = {
+            Status.initial: None,
+            Status.not_started: None,
+            Status.waiting_room: None,
+            Status.started: None,
+            Status.joined: self.__on_meeting_joined,
+            Status.meeting_end: None
+        }
         self.__init_driver()
 
     def __init_driver(self) -> None:
@@ -91,6 +102,9 @@ class ZoomClient(object):
             return Status.waiting_room
 
     def __set_meeting_status(self, status: Status):
+        func = self.__funcs.get(status)
+        if callable(func):
+            func()
         self.__status = status
 
     def join_meeting(self, meeting_id: str, password: str) -> None:
@@ -149,7 +163,13 @@ class ZoomClient(object):
             if md_id == None:
                 self.__on_new_participant(element)
             else:
-                md_id = int(md_id)
+                participant = self.__participants[int(md_id)]
+                self.__check_name_changes(participant, element)
+        for participant in self.__participants:
+            elements = self.__driver.find_elements_by_xpath(
+                '//li[@md_id={}]'.format(participant.id))
+            if len(elements) <= 0:
+                print(participant.name, "çıktı")
 
     def __on_new_participant(self, element):
         md_id = self.__last_id
@@ -158,15 +178,28 @@ class ZoomClient(object):
         name = element.find_element_by_class_name(
             "participants-item__display-name").text
         participant = Participant(md_id, name)
-        print(name)
         self.__participants.append(participant)
         self.__last_id += 1
 
+    def __check_name_changes(self, participant, element):
+        name = element.find_element_by_class_name(
+            "participants-item__display-name").text
+        if participant.name != name:
+            print("isim değişti", name, participant.name)
+            participant.name = name
+
+    def __on_meeting_joined(self):
+        def task():
+            while True:
+                self.__check_participants()
+                sleep(5)
+        thread = threading.Thread(target=task)
+        thread.start()
+        self.__threads.append(thread)
+
     def loop(self):
-        while True:
-            self.__check_participants()
-            sleep(5)
-            input()
+        for thread in self.__threads:
+            thread.join()
 
     def close(self) -> None:
         self.__driver.close()
