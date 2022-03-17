@@ -57,7 +57,7 @@ class ZoomClient(object):
         service = Service(chrome_driver_manager.install())
 
         options = ChromeOptions()
-        # options.headless = True
+        options.headless = True
         options.add_argument("--lang=en")
         # options.add_argument("--disable-gpu")
         options.add_argument("--mute-audio")
@@ -166,10 +166,13 @@ class ZoomClient(object):
                 participant = self.__participants[int(md_id)]
                 self.__check_name_changes(participant, element)
         for participant in self.__participants:
+            if participant.exited:
+                continue
             elements = self.__driver.find_elements_by_xpath(
                 '//li[@md_id={}]'.format(participant.id))
             if len(elements) <= 0:
                 print(participant.name, "çıktı")
+                participant.exited = True
 
     def __on_new_participant(self, element):
         md_id = self.__last_id
@@ -178,6 +181,7 @@ class ZoomClient(object):
         name = element.find_element_by_class_name(
             "participants-item__display-name").text
         participant = Participant(md_id, name)
+        print(participant.name, "katıldı")
         self.__participants.append(participant)
         self.__last_id += 1
 
@@ -185,7 +189,7 @@ class ZoomClient(object):
         name = element.find_element_by_class_name(
             "participants-item__display-name").text
         if participant.name != name:
-            print("isim değişti", name, participant.name)
+            print(participant.name, "ismini", name, "olarak değiştirdi")
             participant.name = name
 
     def __on_meeting_joined(self):

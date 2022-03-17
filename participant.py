@@ -5,3 +5,4 @@ from dataclasses import dataclass
 class Participant:
     id: int
     name: str
+    exited: bool = False

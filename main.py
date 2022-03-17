@@ -5,10 +5,7 @@ import logging
 
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.DEBUG)
-    logger.debug("asdas")
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.CRITICAL)
     logger.debug("asdas")
     client = ZoomClient()
     client.join_meeting("810 2345 8283", "12345678")
