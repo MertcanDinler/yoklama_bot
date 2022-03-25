@@ -8,6 +8,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.CRITICAL)
     logger.debug("asdas")
     client = ZoomClient()
-    client.join_meeting("810 2345 8283", "12345678")
+    client.join_meeting("865 9239 5184", "12345676")
     client.loop()
     client.close()

@@ -34,7 +34,7 @@ class ZoomClientError(Exception):
 class ZoomClient(object):
     __driver: Chrome = None
     __meeting_id: int = None
-    __status: int = None
+    __status: int = Status.initial
     __participants: "list[Participant]" = []
     __old_participants_els: list = []
     __last_id: int = 0
@@ -74,7 +74,7 @@ class ZoomClient(object):
         if len(errors) > 0:
             raise ZoomClientError(errors[0].text)
 
-        if self.__status in [Status.waiting_room]:
+        if self.__status in [Status.waiting_room, Status.initial, Status.not_started]:
             elements = self.__driver.find_elements_by_class_name(
                 "zm-modal-body-title")
             if len(elements) > 0 and "ended by host" in elements[0].text:
@@ -87,6 +87,7 @@ class ZoomClient(object):
             if len(elements) > 0:
                 print("joined")
                 return Status.joined
+        return self.__status
 
         # Meeting not started
         elements = self.__driver.find_elements_by_id("prompt")
@@ -140,8 +141,8 @@ class ZoomClient(object):
         # .wr-leave-btn
         # .footer__leave-btn-container
 
-        WebDriverWait(self.__driver, 180).until(lambda driver: driver.find_element_by_class_name(
-            "wr-leave-btn") or driver.find_element_by_class_name("footer__leave-btn-container"))
+        WebDriverWait(self.__driver, 180).until(
+            lambda driver:  driver.find_element_by_class_name("footer__leave-btn-container"))
         #WebDriverWait(self.__driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".wr-leave-btn, .element_B_class")))
         self.__set_meeting_status(self.__check_meeting_state())
 
@@ -159,7 +160,10 @@ class ZoomClient(object):
         participant_elements = self.__driver.find_elements_by_class_name(
             "participants-li")
         for element in participant_elements:
-            md_id = element.get_attribute("md_id")
+            try:
+                md_id = element.get_attribute("md_id")
+            except:
+                continue
             if md_id == None:
                 self.__on_new_participant(element)
             else:
